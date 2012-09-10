@@ -326,7 +326,7 @@ class VDPSettingsPage {
 		$menu_title = 'Varnish Depedency Purger',
 		$capability = 'administrator',
 		$menu_slug  = 'vdp-settings-page',
-		$functions  = 'options.php';
+		$file_name  = 'options.php';
 
 	public function __construct() {
 		add_options_page(
@@ -334,7 +334,7 @@ class VDPSettingsPage {
 			$this->menu_title,
 			$this->capability,
 			$this->menu_slug,
-			create_function('', 'include(plugin_dir_path(__FILE__).\'options.php\');')
+			create_function('', 'include(plugin_dir_path(__FILE__).\''.$this->filename.'.php\');')
 		);
 		add_action('admin_init', array($this, 'register_settings'));
 	}
