@@ -203,7 +203,7 @@ class VDP {
 	 **/
 	public function post_published($post_id) {
 		foreach($this->varnish_nodes as $node) {
-			$node->ban('.');
+			$node->ban('.*');
 		}
 	}
 
@@ -293,7 +293,7 @@ class VDPVarnishNode {
 	 **/
 	public function ban($match) {
 		$request = $this->setup_request(VDP::current_page_url(), 'BAN');
-		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-Match: '.$match));
+		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-URL: '.$match));
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
