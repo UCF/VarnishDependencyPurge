@@ -125,38 +125,42 @@ class VDP {
 
 		$current_page_url = self::current_page_url();
 
-		// Don't retrigger register_posts when making queries later in this
-		// method
-		$this->remove_query_filter();
+		// Don't record assets and other stuff, Only record URLs that end in a /
+		if(substr($current_page_url, -1) === '/') {
 
-		// Call this once more to catch anything that happened between the last
-		// query filter and shutdown 
-		$this->register_posts();
+			// Don't retrigger register_posts when making queries later in this
+			// method
+			$this->remove_query_filter();
 
-		// Delete the existing dependencies for this URL
-		$wpdb->query($wpdb->prepare(
-			'DELETE FROM '.self::get_db_table_name().' WHERE page_url = %s',
-			$current_page_url
-		));
+			// Call this once more to catch anything that happened between the last
+			// query filter and shutdown 
+			$this->register_posts();
 
-		// Only record each post id once
-		$this->vdp_post_ids = array_unique($this->vdp_post_ids);
+			// Delete the existing dependencies for this URL
+			$wpdb->query($wpdb->prepare(
+				'DELETE FROM '.self::get_db_table_name().' WHERE page_url = %s',
+				$current_page_url
+			));
 
-		// Insert the new dependencies
-		foreach($this->vdp_post_ids as $post_id) {
-			$wpdb->insert(
-				self::get_db_table_name(),
-				array(
-					'page_url' => $current_page_url,
-					'post_id'  => $post_id
-				),
-				array(
-					'%s',
-					'%d'
-				)
-			);
+			// Only record each post id once
+			$this->vdp_post_ids = array_unique($this->vdp_post_ids);
+
+			// Insert the new dependencies
+			foreach($this->vdp_post_ids as $post_id) {
+				$wpdb->insert(
+					self::get_db_table_name(),
+					array(
+						'page_url' => $current_page_url,
+						'post_id'  => $post_id
+					),
+					array(
+						'%s',
+						'%d'
+					)
+				);
+			}
+			$this->add_query_filter();
 		}
-		$this->add_query_filter();
 	}
 
 	private function post_modified($post_id) {
