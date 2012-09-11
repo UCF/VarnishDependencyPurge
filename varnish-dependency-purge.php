@@ -18,7 +18,7 @@ class VDP {
 
 	public function __construct() {
 		// Parse the varnish nodes
-		if( ($node = self::parse_varnish_nodes()) !== False) {
+		if( ($nodes = self::parse_varnish_nodes()) !== False) {
 			$this->varnish_nodes = $nodes;
 		}
 
@@ -170,11 +170,11 @@ class VDP {
 		', $post_id), ARRAY_A);
 
 		// Flatten the results
-		$purge_urls = array_map(create_function('$i', 'return $i[\'page_url\'];'), $page_urls);
+		$purge_urls = array_map(create_function('$i', 'return $i[\'page_url\'];'), $purge_urls);
 
 		// Always include this post's permalink
 		if( ($permalink = get_permalink($post_id)) !== False && !in_array($permalink, $purge_urls)) {
-			$purge_urls[] = $permalnk;
+			$purge_urls[] = $permalink;
 		}
 
 		// Purge the URLs on each Varnish node
@@ -273,9 +273,9 @@ class VDPVarnishNode {
 	 * top level domain or ipaddress with the host and port of this node.
 	 **/
 	public function purge($url) {
-		
-		$request = setup_request($url, 'PURGE');
-		$success = make_request($request);
+
+		$request = $this->setup_request($url, 'PURGE');
+		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
 			return False;
@@ -288,9 +288,9 @@ class VDPVarnishNode {
 	 * Send a BAN request to this varnish node
 	 **/
 	public function ban($match) {
-		$request = setup_request(VDP::current_page_url(), 'BAN');
+		$request = $this->setup_request(VDP::current_page_url(), 'BAN');
 		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-Match: '.$match));
-		$success = make_request($request);
+		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
 			return False;
@@ -304,9 +304,10 @@ class VDPVarnishNode {
 	 **/
 	private function setup_request($url, $method) {
 		$request = curl_init($url);
-		curl_setopt($request, CURLOPT_CUSTOMREQUEST, $method);
-		curl_setopt($request, CURLOPT_PORT,          $this->port);
-		curl_setopt($request, CURLOPT_TIMEOUT,       $this->timeout);
+		curl_setopt($request, CURLOPT_CUSTOMREQUEST,  $method);
+		curl_setopt($request, CURLOPT_PORT,           $this->port);
+		curl_setopt($request, CURLOPT_TIMEOUT,        $this->timeout);
+		curl_setopt($request, CURLOPT_RETURNTRANSFER, True);
 		return $request;
 	}
 
@@ -334,7 +335,7 @@ class VDPSettingsPage {
 			$this->menu_title,
 			$this->capability,
 			$this->menu_slug,
-			create_function('', 'include(plugin_dir_path(__FILE__).\''.$this->filename.'.php\');')
+			create_function('', 'include(plugin_dir_path(__FILE__).\''.$this->file_name.'\');')
 		);
 		add_action('admin_init', array($this, 'register_settings'));
 	}
