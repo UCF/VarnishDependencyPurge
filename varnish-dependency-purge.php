@@ -13,8 +13,8 @@ class VDP {
 		$purge_timeout = 3; // seconds
 
 	private
-		$varnish_nodes = array(),
-		$vdp_post_ids  = array();
+		$varnish_nodes       = array(),
+		$vdp_post_ids        = array();
 
 	public function __construct() {
 		// Parse the varnish nodes
@@ -34,9 +34,8 @@ class VDP {
 		add_filter('shutdown', array($this, 'write_posts'));
 
 		// Purge URLs when a post is updated
-		add_action('publish_post', array($this, 'post_published'));
-		add_action('edit_post',    array($this, 'post_edited'));
 		add_action('deleted_post', array($this, 'post_deleted'));
+		add_action('post_updated', array($this, 'post_edited'), 10, 3);
 	}
 
 	/** Public Methods **/
@@ -196,36 +195,33 @@ class VDP {
 		return $success;
 	}
 
-
-	/**
-	 * Since we can't know before hand the dependencies of this post, ban
-	 * the entire cache
-	 **/
-	public function post_published($post_id) {
-		foreach($this->varnish_nodes as $node) {
-			$node->ban('.*');
-		}
-	}
-
 	/**
 	 * Purge associated URL. Deleted dependencies.
 	 **/
 	public function post_deleted($post_id) {
 		global $wpdb;
 
-		if($this->post_modified($post_id)) {
-			$this->remove_query_filter();
-			$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' post_id = %d', $post_id));
-			$this->add_query_filter();
+		if( ($parent_id = wp_is_post_revision($post_id)) !== False) {
+			$post_id = $parent_id;
 		}
+
+		$this->remove_query_filter();
+		$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' post_id = %d', $post_id));
+		$this->add_query_filter();
 		
 	}
 
 	/**
 	 * Purse associated URLs
 	 **/
-	public function post_edited($post_id) {
-		$this->post_modified($post_id);
+	public function post_edited($post_id, $post_after, $post_before) {
+		if($post_after->post_status == 'publish' && $post_before->post_status != 'publish') {
+			foreach($this->varnish_nodes as $node) {
+				$node->ban('.*');
+			}
+		} else {
+			$this->post_modified($post_id);
+		}
 	}
 
 	/** Private Methods **/
@@ -282,25 +278,24 @@ class VDPVarnishNode {
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
-			return False;
-		} else {
-			return True;
 		}
+		curl_close($request);
+		return $success;
 	}
 
 	/**
 	 * Send a BAN request to this varnish node
 	 **/
 	public function ban($match) {
-		$request = $this->setup_request(VDP::current_page_url(), 'BAN');
+		var_dump(home_url('', 'http'));
+		$request = $this->setup_request(home_url('', 'http'), 'BAN');
 		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-URL: '.$match));
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
-			return False;
-		} else {
-			return True;
 		}
+		curl_close($request);
+		return $success;
 	}
 
 	/**
@@ -320,7 +315,6 @@ class VDPVarnishNode {
 	 **/
 	private function make_request($request) {
 		$success = curl_exec($request);
-		curl_close($request);
 		return $success;
 	}
 }
