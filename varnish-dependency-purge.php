@@ -58,7 +58,7 @@ class VDP {
 				$node_info_parts = explode(':', $node_info);
 				if(count($node_info_parts) == 2 && is_string($node_info_parts[0]) && 
 					$node_info_parts[0] != '' && is_numeric($node_info_parts[1])) {
-					$nodes[] = new VDPVarnishNode($node_info_parts[0], $node_info_parts[1], self::$purge_timeout);
+					$nodes[] = new VDPVarnishNode($node_info_parts[0], (int)$node_info_parts[1], self::$purge_timeout);
 				} else {
 					return False;
 				}
@@ -126,10 +126,8 @@ class VDP {
 		if(!is_admin()) {
 			global $wpdb;
 
-			$current_page_url = self::current_page_url();
-
 			// Don't record assets and other stuff, Only record URLs that end in a /
-			if(substr($current_page_url, -1) === '/') {
+			if(substr($_SERVER['REQUEST_URI'], -1) === '/') {
 
 				// Don't retrigger register_posts when making queries later in this
 				// method
@@ -142,7 +140,7 @@ class VDP {
 				// Delete the existing dependencies for this URL
 				$wpdb->query($wpdb->prepare(
 					'DELETE FROM '.self::get_db_table_name().' WHERE page_url = %s',
-					$current_page_url
+					$_SERVER['REQUEST_URI']
 				));
 
 				// Only record each post id once
@@ -153,7 +151,7 @@ class VDP {
 					$wpdb->insert(
 						self::get_db_table_name(),
 						array(
-							'page_url' => $current_page_url,
+							'page_url' => $_SERVER['REQUEST_URI'],
 							'post_id'  => $post_id
 						),
 						array(
@@ -205,6 +203,7 @@ class VDP {
 				foreach($this->varnish_nodes as $node) {
 					$node->purge($purge_url);
 				}
+				break;
 			}
 
 			$this->add_query_filter();
@@ -237,7 +236,7 @@ class VDP {
 	 **/
 	public function post_edited($post_id, $post_after, $post_before) {
 		if($post_after->post_status == 'publish' && $post_before->post_status != 'publish') {
-			$this->post_created = True;
+			$this->posts_created = True;
 		} else {
 			$this->edited_post_ids[] = $post_id;
 		}
@@ -248,22 +247,6 @@ class VDP {
 	private static function get_db_table_name() {
 		global $wpdb;
 		return $wpdb->prefix.self::$db_table_name;
-	}
-
-	/**
-	 * Construct the current page's URL. Varnish doesn't support SSL so don't
-	 * bother detecting it
-	 **/
-	public static function current_page_url() {
-		$page_url = 'http://'.$_SERVER['SERVER_NAME'];
-
-		if($_SERVER['SERVER_PORT'] != '80') {
-			$page_url .= ':'.$_SERVER['SERVER_PORT'];
-		} 
-
-		$page_url .= $_SERVER['REQUEST_URI'];
-
-		return $page_url;
 	}
 
 	private function remove_query_filter() {
@@ -292,8 +275,8 @@ class VDPVarnishNode {
 	 * top level domain or ipaddress with the host and port of this node.
 	 **/
 	public function purge($url) {
-
-		$request = $this->setup_request($url, 'PURGE');
+		$request = $this->setup_request('PURGE');
+		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Purge-URL:'.$url, 'Host:'.$_SERVER['SERVER_NAME']));
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
@@ -306,9 +289,8 @@ class VDPVarnishNode {
 	 * Send a BAN request to this varnish node
 	 **/
 	public function ban($match) {
-		var_dump(home_url('', 'http'));
-		$request = $this->setup_request(home_url('', 'http'), 'BAN');
-		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-URL: '.$match));
+		$request = $this->setup_request('BAN');
+		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-URL:'.$match, 'Host:'.$_SERVER['SERVER_NAME']));
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
@@ -320,11 +302,11 @@ class VDPVarnishNode {
 	/**
 	 * Setup a CURL request to this Varnish node
 	 **/
-	private function setup_request($url, $method) {
-		$request = curl_init($url);
+	private function setup_request($method) {
+		$request = curl_init($this->host);
 		curl_setopt($request, CURLOPT_CUSTOMREQUEST,  $method);
-		//curl_setopt($request, CURLOPT_PORT,           $this->port);
-		//curl_setopt($request, CURLOPT_TIMEOUT,        $this->timeout);
+		curl_setopt($request, CURLOPT_PORT,           $this->port);
+		curl_setopt($request, CURLOPT_TIMEOUT,        $this->timeout);
 		curl_setopt($request, CURLOPT_RETURNTRANSFER, True);
 		return $request;
 	}
