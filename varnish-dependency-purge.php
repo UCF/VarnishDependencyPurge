@@ -13,8 +13,11 @@ class VDP {
 		$purge_timeout = 3; // seconds
 
 	private
-		$varnish_nodes       = array(),
-		$vdp_post_ids        = array();
+		$varnish_nodes    = array(),
+		$vdp_post_ids     = array(),
+		$edited_post_ids  = array(),
+		$deleted_post_ids = array(),
+		$posts_created    = False;
 
 	public function __construct() {
 		// Parse the varnish nodes
@@ -32,6 +35,7 @@ class VDP {
 		// Record and write the dependent posts
 		add_filter('query',    array($this, 'query_filter'));
 		add_filter('shutdown', array($this, 'write_posts'));
+		add_filter('shutdown', array($this, 'resolve_posts'));
 
 		// Purge URLs when a post is updated
 		add_action('deleted_post', array($this, 'post_deleted'));
@@ -163,53 +167,69 @@ class VDP {
 		}
 	}
 
-	private function post_modified($post_id) {
+	/**
+	 * Deal with the posts that were modified in this execution.
+	 *
+	 **/
+	public function resolve_posts() {
 		global $wpdb;
 
-		$this->remove_query_filter();
-
-		// Get all the URLs that depend on this post
-		$purge_urls = $wpdb->get_results($wpdb->prepare('
-			SELECT DISTINCT page_url FROM '.$this->get_db_table_name().' WHERE post_id = %d
-		', $post_id), ARRAY_A);
-
-		// Flatten the results
-		$purge_urls = array_map(create_function('$i', 'return $i[\'page_url\'];'), $purge_urls);
-
-		// Always include this post's permalink
-		if( ($permalink = get_permalink($post_id)) !== False && !in_array($permalink, $purge_urls)) {
-			$purge_urls[] = $permalink;
-		}
-
-		// Purge the URLs on each Varnish node
-		$success = True;
-		foreach($purge_urls as $purge_url) {
+		if($this->posts_created) {
+			// Ban on all pages. Don't need to bother with the edited posts
 			foreach($this->varnish_nodes as $node) {
-				if(!$node->purge($purge_url) && $success === True) {
-					$success = False;
+				$node->ban('.*\/$');
+			}
+		} else if(count($this->edited_post_ids) > 0) {
+			$this->remove_query_filter();
+
+			$this->edited_post_ids = array_unique($this->edited_post_ids);
+
+			// Get a list of all the  URLs dependent on any of the edited posts
+			// TODO: Figure out a way to fit this into a `prepare`
+			$purge_urls = $wpdb->get_results('
+				SELECT DISTINCT page_url FROM '.$this->get_db_table_name().' WHERE post_id IN ('.implode(',', $this->edited_post_ids).')
+			', ARRAY_A);
+
+			// Flatten the results
+			$purge_urls = array_map(create_function('$i', 'return $i[\'page_url\'];'), $purge_urls);
+
+			// Always include this the post permalink
+			foreach($this->edited_post_ids as $post_id) {
+				if( ($permalink = get_permalink($post_id)) !== False && !in_array($permalink, $purge_urls)) {
+					$purge_urls[] = $permalink;
 				}
 			}
+
+			// Purge the URLs on each Varnish node
+			foreach($purge_urls as $purge_url) {
+				foreach($this->varnish_nodes as $node) {
+					$node->purge($purge_url);
+				}
+			}
+
+			$this->add_query_filter();
 		}
 
-		$this->add_query_filter();
+		// Removed any dependencies for deleted posts
+		if(count($this->deleted_post_ids) > 0) {
+			$this->remove_query_filter();
+			foreach($this->deleted_post_ids as $post_id) {
+				if( ($parent_id = wp_is_post_revision($post_id)) !== False) {
+					$post_id = $parent_id;
+				}
 
-		return $success;
+				$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' post_id = %d', $post_id));
+			}
+			$this->add_query_filter();
+		}
+
 	}
 
 	/**
 	 * Purge associated URL. Deleted dependencies.
 	 **/
 	public function post_deleted($post_id) {
-		global $wpdb;
-
-		if( ($parent_id = wp_is_post_revision($post_id)) !== False) {
-			$post_id = $parent_id;
-		}
-
-		$this->remove_query_filter();
-		$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' post_id = %d', $post_id));
-		$this->add_query_filter();
-		
+		$this->deleted_post_ids[] = $post_ids;
 	}
 
 	/**
@@ -217,11 +237,9 @@ class VDP {
 	 **/
 	public function post_edited($post_id, $post_after, $post_before) {
 		if($post_after->post_status == 'publish' && $post_before->post_status != 'publish') {
-			foreach($this->varnish_nodes as $node) {
-				$node->ban('.*');
-			}
+			$this->post_created = True;
 		} else {
-			$this->post_modified($post_id);
+			$this->edited_post_ids[] = $post_id;
 		}
 	}
 
@@ -305,8 +323,8 @@ class VDPVarnishNode {
 	private function setup_request($url, $method) {
 		$request = curl_init($url);
 		curl_setopt($request, CURLOPT_CUSTOMREQUEST,  $method);
-		curl_setopt($request, CURLOPT_PORT,           $this->port);
-		curl_setopt($request, CURLOPT_TIMEOUT,        $this->timeout);
+		//curl_setopt($request, CURLOPT_PORT,           $this->port);
+		//curl_setopt($request, CURLOPT_TIMEOUT,        $this->timeout);
 		curl_setopt($request, CURLOPT_RETURNTRANSFER, True);
 		return $request;
 	}
