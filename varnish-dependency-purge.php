@@ -105,9 +105,8 @@ class VDP {
 	 * this URL relies on it and add it to the global vdp_post_ids list.
 	 **/
 	public function register_posts() {
-		global $wpdb;
-
 		if(!is_admin()) {
+			global $wpdb;
 			foreach($wpdb->last_result as $result) {
 				if(isset($result->post_id)) {
 					$this->vdp_post_ids[] = $result->post_id;
@@ -120,45 +119,47 @@ class VDP {
 	 *	Write the posts collected by register_posts to the database.
 	 **/
 	public function write_posts() {
-		global $wpdb;
+		if(!is_admin()) {
+			global $wpdb;
 
-		$current_page_url = self::current_page_url();
+			$current_page_url = self::current_page_url();
 
-		// Don't record assets and other stuff, Only record URLs that end in a /
-		if(substr($current_page_url, -1) === '/') {
+			// Don't record assets and other stuff, Only record URLs that end in a /
+			if(substr($current_page_url, -1) === '/') {
 
-			// Don't retrigger register_posts when making queries later in this
-			// method
-			$this->remove_query_filter();
+				// Don't retrigger register_posts when making queries later in this
+				// method
+				$this->remove_query_filter();
 
-			// Call this once more to catch anything that happened between the last
-			// query filter and shutdown 
-			$this->register_posts();
+				// Call this once more to catch anything that happened between the last
+				// query filter and shutdown 
+				$this->register_posts();
 
-			// Delete the existing dependencies for this URL
-			$wpdb->query($wpdb->prepare(
-				'DELETE FROM '.self::get_db_table_name().' WHERE page_url = %s',
-				$current_page_url
-			));
+				// Delete the existing dependencies for this URL
+				$wpdb->query($wpdb->prepare(
+					'DELETE FROM '.self::get_db_table_name().' WHERE page_url = %s',
+					$current_page_url
+				));
 
-			// Only record each post id once
-			$this->vdp_post_ids = array_unique($this->vdp_post_ids);
+				// Only record each post id once
+				$this->vdp_post_ids = array_unique($this->vdp_post_ids);
 
-			// Insert the new dependencies
-			foreach($this->vdp_post_ids as $post_id) {
-				$wpdb->insert(
-					self::get_db_table_name(),
-					array(
-						'page_url' => $current_page_url,
-						'post_id'  => $post_id
-					),
-					array(
-						'%s',
-						'%d'
-					)
-				);
+				// Insert the new dependencies
+				foreach($this->vdp_post_ids as $post_id) {
+					$wpdb->insert(
+						self::get_db_table_name(),
+						array(
+							'page_url' => $current_page_url,
+							'post_id'  => $post_id
+						),
+						array(
+							'%s',
+							'%d'
+						)
+					);
+				}
+				$this->add_query_filter();
 			}
-			$this->add_query_filter();
 		}
 	}
 
