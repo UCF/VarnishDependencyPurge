@@ -48,7 +48,6 @@ class VDP {
 	 * Parse the raw Varnish node option into VDPVarnishNode objects.
 	 * Option value format: <ip address or domain name>:port
 	 * Multiple nodes are separated by semicolons.
-	 * @return array/false
 	 **/
 	public static function parse_varnish_nodes() {
 		$nodes        = array();
@@ -70,7 +69,7 @@ class VDP {
 	/**
 	 * Attached to the `query` action. Named function instead of anonymous
 	 * so that it can be unregistered before and re-registered after
-	 * writing the posts. Otherwise writing the posts would cause an infinite
+	 * writing the posts. Otherwise queries in other methods would cause an infinite
 	 * loop because the `query` action would be triggered on each DB call. 
 	 **/
 	public function query_filter($query) {
@@ -105,8 +104,8 @@ class VDP {
 	}
 
 	/**
-	 * Look at the last result from wpdb. If it contain's a post ID, assume
-	 * this URL relies on it and add it to the global vdp_post_ids list.
+	 * Look at the last result from wpdb. If it contain's a post ID, we assume
+	 * that the output of this page relies on it. Record it.
 	 **/
 	public function register_posts() {
 		if(!is_admin()) {
@@ -225,14 +224,14 @@ class VDP {
 	}
 
 	/**
-	 * Purge associated URL. Deleted dependencies.
+	 * Records posts that have been deleted to their dependencies can be cleared
 	 **/
 	public function post_deleted($post_id) {
 		$this->deleted_post_ids[] = $post_ids;
 	}
 
 	/**
-	 * Purse associated URLs
+	 * Record URLs that need to be purged
 	 **/
 	public function post_edited($post_id, $post_after, $post_before) {
 		if($post_after->post_status == 'publish' && $post_before->post_status != 'publish') {
@@ -271,8 +270,7 @@ class VDPVarnishNode {
 	}
 
 	/**
-	 * Send a PURGE request to this Varnish node. Replace whatever
-	 * top level domain or ipaddress with the host and port of this node.
+	 * Send a PURGE request to this Varnish node.
 	 **/
 	public function purge($url) {
 		$request = $this->setup_request('PURGE');
@@ -286,7 +284,7 @@ class VDPVarnishNode {
 	}
 
 	/**
-	 * Send a BAN request to this varnish node
+	 * Send a BAN request to this Varnish node
 	 **/
 	public function ban($match) {
 		$request = $this->setup_request('BAN');
