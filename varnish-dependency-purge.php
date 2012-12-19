@@ -126,7 +126,8 @@ class VDP {
 			global $wpdb;
 
 			// Don't record assets and other stuff, Only record URLs that end in a /
-			if(substr($_SERVER['REQUEST_URI'], -1) === '/') {
+			// Don't record anything on 404 pages
+			if(substr($_SERVER['REQUEST_URI'], -1) === '/' && !is_404()) {
 
 				// Don't retrigger register_posts when making queries later in this
 				// method
