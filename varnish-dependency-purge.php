@@ -127,7 +127,21 @@ class VDP {
 
 			// Don't record assets and other stuff, Only record URLs that end in a /
 			// Don't record anything on 404 pages
-			if(substr($_SERVER['REQUEST_URI'], -1) === '/' && !is_404()) {
+			// Don't record anything from anyone with WordPress cookies
+			// Dont' record anytyhing with the X-Skip-Depedency Check header (varnish heatlh check)
+			$headers = apache_request_headers();
+			$wp_cookie_present = False;
+			foreach($_COOKIE as $name => $value) {
+				if(strpos($name, 'wordpress') == 0 || strpos($name, 'wp-settings') == 0) {
+					$wp_cookie_present = True;
+					break;
+				}
+			}
+
+			if( substr($_SERVER['REQUEST_URI'], -1) === '/' 
+				&& !is_404()
+				&& !$wp_cookie_present
+				&& !isset($headers['X-Skip-Dependency-Check'])) {
 
 				// Don't retrigger register_posts when making queries later in this
 				// method
