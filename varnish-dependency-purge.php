@@ -138,7 +138,7 @@ class VDP {
 				}
 			}
 
-			if( substr($_SERVER['REQUEST_URI'], -1) === '/' 
+			if( preg_match('/\/$|feed\/\?post_type=[a-zA-Z]+$/', $_SERVER['REQUEST_URI'])
 				&& !is_404()
 				&& !$wp_cookie_present
 				&& !isset($headers['X-Skip-Dependency-Check'])) {
@@ -190,6 +190,7 @@ class VDP {
 			// Ban on all pages. Don't need to bother with the edited posts
 			foreach($this->varnish_nodes as $node) {
 				$node->ban('.*\/$');
+				$node->ban('.*\/feed\/.*');
 			}
 		} else if(count($this->edited_post_ids) > 0) {
 			$this->remove_query_filter();
@@ -217,7 +218,6 @@ class VDP {
 				foreach($this->varnish_nodes as $node) {
 					$node->purge($purge_url);
 				}
-				break;
 			}
 
 			$this->add_query_filter();
