@@ -216,7 +216,8 @@ class VDP {
 			// Purge the URLs on each Varnish node
 			foreach($purge_urls as $purge_url) {
 				foreach($this->varnish_nodes as $node) {
-					$node->purge($purge_url);
+					$node->purge($purge_url, 'http');
+					$node->purge($purge_url, 'https');
 				}
 			}
 
@@ -287,9 +288,9 @@ class VDPVarnishNode {
 	/**
 	 * Send a PURGE request to this Varnish node.
 	 **/
-	public function purge($url) {
+	public function purge($url, $protocol) {
 		$request = $this->setup_request('PURGE');
-		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Purge-URL:'.$url, 'Host:'.$_SERVER['SERVER_NAME']));
+		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Purge-URL:'.$url, 'Host:'.$_SERVER['SERVER_NAME'], 'X-Forwarded-Proto:'.$protocol));
 		$success = $this->make_request($request);
 		if(!$success) {
 			trigger_error('Varnish Depedency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
