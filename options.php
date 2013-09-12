@@ -2,8 +2,6 @@
   <h2>Varnish Depedency Purger</h2>
 	<form method="post" action="options.php">
 		<?php settings_fields('vdp-settings-group'); ?>
-		<?php do_settings_fields('vdp-settings-page'); ?>
-		<?php  ?>
 		<table class="form-table">
 			<tr valign="top">
 				<th scope="row">Varnish Nodes</th>
