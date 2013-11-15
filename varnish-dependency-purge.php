@@ -40,6 +40,11 @@ class VDP {
 		// Purge URLs when a post is updated
 		add_action('deleted_post', array($this, 'post_deleted'));
 		add_action('post_updated', array($this, 'post_edited'), 10, 3);
+
+        // Purge media URLs
+        add_action('add_attachment', array($this, 'media_edited'));
+        add_action('edit_attachment', array($this, 'media_edited'));
+        add_action('delete_attachment', array($this, 'media_edited'));
 	}
 
 	/** Public Methods **/
@@ -55,7 +60,7 @@ class VDP {
 		if($option_value != '') {
 			foreach(explode(';', $option_value) as $node_info) {
 				$node_info_parts = explode(':', $node_info);
-				if(count($node_info_parts) == 2 && is_string($node_info_parts[0]) && 
+				if(count($node_info_parts) == 2 && is_string($node_info_parts[0]) &&
 					$node_info_parts[0] != '' && is_numeric($node_info_parts[1])) {
 					$nodes[] = new VDPVarnishNode($node_info_parts[0], (int)$node_info_parts[1], self::$purge_timeout);
 				} else {
@@ -70,7 +75,7 @@ class VDP {
 	 * Attached to the `query` action. Named function instead of anonymous
 	 * so that it can be unregistered before and re-registered after
 	 * writing the posts. Otherwise queries in other methods would cause an infinite
-	 * loop because the `query` action would be triggered on each DB call. 
+	 * loop because the `query` action would be triggered on each DB call.
 	 **/
 	public function query_filter($query) {
 		$this->register_posts();
@@ -148,7 +153,7 @@ class VDP {
 				$this->remove_query_filter();
 
 				// Call this once more to catch anything that happened between the last
-				// query filter and shutdown 
+				// query filter and shutdown
 				$this->register_posts();
 
 				// Delete the existing dependencies for this URL
@@ -257,6 +262,21 @@ class VDP {
 		}
 	}
 
+    /**
+     * Records Media URLs that need to be purged
+     **/
+    public function media_edited($post_id) {
+            // If media file then purge it's direct url
+            $media_url = wp_get_attachment_url($post_id);
+            if($media_url) {
+                    $parsed_media_url = parse_url($media_url);
+                    foreach($this->varnish_nodes as $node) {
+                            $node->purge($parsed_media_url['path'], 'http');
+                            $node->purge($parsed_media_url['path'], 'https');
+                    }
+            }
+    }
+
 	/** Private Methods **/
 
 	private static function get_db_table_name() {
@@ -270,7 +290,7 @@ class VDP {
 	private function add_query_filter() {
 		add_filter('query', array($this, 'query_filter'));
 	}
-	
+
 }
 
 class VDPVarnishNode {
