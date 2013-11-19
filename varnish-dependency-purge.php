@@ -269,10 +269,12 @@ class VDP {
             // If media file then purge it's direct url
             $media_url = wp_get_attachment_url($post_id);
             if($media_url) {
+                    // Handle removing all variants of the media file (i.e. image-100x100.jpg)
                     $parsed_media_url = parse_url($media_url);
+                    $path_parts = pathinfo($parsed_media_url['path']);
+                    $ban_url = $path_parts['dirname'] . '/' . $path_parts['filename'] . '.*\.' . $path_parts['extension'];
                     foreach($this->varnish_nodes as $node) {
-                            $node->purge($parsed_media_url['path'], 'http');
-                            $node->purge($parsed_media_url['path'], 'https');
+                            $node->ban($ban_url);
                     }
             }
     }
