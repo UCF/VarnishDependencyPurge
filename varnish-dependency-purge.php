@@ -130,7 +130,7 @@ class VDP {
 		if(!is_admin()) {
 			global $wpdb;
 
-			// Don't record assets and other stuff, Only record URLs that end in a /
+			// Don't record assets and other stuff, Only record URLs that end in a / or are feeds for specified post types and custom thumbnails
 			// Don't record anything on 404 pages
 			// Don't record anything from anyone with WordPress cookies
 			// Dont' record anytyhing with the X-Skip-Depedency Check header (varnish heatlh check)
@@ -143,7 +143,7 @@ class VDP {
 				}
 			}
 
-			if( preg_match('/\/$|feed\/\?post_type=[a-zA-Z]+$/', $_SERVER['REQUEST_URI'])
+			if( preg_match('/\/$|feed\/\?post_type=[a-zA-Z]+$|feed\/\?thumb=[a-zA-Z0-9_]+$/', $_SERVER['REQUEST_URI'])
 				&& !is_404()
 				&& !$wp_cookie_present
 				&& !isset($headers['X-Skip-Dependency-Check'])) {
