@@ -143,7 +143,7 @@ class VDP {
 				}
 			}
 
-			if( preg_match('/\/$|feed\/\?post_type=[a-zA-Z]+$|feed\/\?thumb=[a-zA-Z0-9_]+$/', $_SERVER['REQUEST_URI'])
+			if( !preg_match('/\/esi\.php/', $_SERVER['REQUEST_URI'] )
 				&& !is_404()
 				&& !$wp_cookie_present
 				&& !isset($headers['X-Skip-Dependency-Check'])) {
@@ -195,7 +195,7 @@ class VDP {
 			// Ban on all pages. Don't need to bother with the edited posts
 			foreach($this->varnish_nodes as $node) {
 				$node->ban('.*\/$');
-				$node->ban('.*\/feed\/.*');
+				$node->ban('.*\/\?.*');
 			}
 		} else if(count($this->edited_post_ids) > 0) {
 			$this->remove_query_filter();
