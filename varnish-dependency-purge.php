@@ -237,7 +237,7 @@ class VDP {
 					$post_id = $parent_id;
 				}
 
-				$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' post_id = %d', $post_id));
+				$wpdb->query($wpdb->prepare('DELETE FROM '.self::get_db_table_name().' WHERE post_id = %d', $post_id));
 			}
 			$this->add_query_filter();
 		}
