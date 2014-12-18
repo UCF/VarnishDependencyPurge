@@ -1,5 +1,5 @@
 <div class="wrap">
-  <h2>Varnish Depedency Purger</h2>
+  <h2>Varnish Dependency Purger</h2>
 	<form method="post" action="options.php">
 		<?php settings_fields('vdp-settings-group'); ?>
 		<table class="form-table">
