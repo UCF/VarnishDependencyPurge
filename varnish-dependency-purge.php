@@ -40,6 +40,7 @@ class VDP {
 		// Purge URLs when a post is updated
 		add_action('deleted_post', array($this, 'post_deleted'));
 		add_action('post_updated', array($this, 'post_edited'), 10, 3);
+		add_action('edit_category', array($this, 'category_changed'));
 
         // Purge media URLs
         add_action('add_attachment', array($this, 'media_edited'));
@@ -259,6 +260,14 @@ class VDP {
 			$this->posts_created = True;
 		} else {
 			$this->edited_post_ids[] = $post_id;
+		}
+	}
+
+	public function category_changed($category_id) {
+		$posts = WP_Query('cat=' . $category_id);
+
+		foreach($posts as $post) {
+			$this->edited_post_ids[] = $post->ID;
 		}
 	}
 
