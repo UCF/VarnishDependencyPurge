@@ -264,7 +264,7 @@ class VDP {
 	}
 
 	public function category_changed($category_id) {
-		$posts = WP_Query('cat=' . $category_id);
+		$posts = new WP_Query('cat=' . $category_id);
 
 		foreach($posts as $post) {
 			$this->edited_post_ids[] = $post->ID;
