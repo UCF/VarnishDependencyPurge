@@ -40,7 +40,14 @@ class VDP {
 		// Purge URLs when a post is updated
 		add_action('deleted_post', array($this, 'post_deleted'));
 		add_action('post_updated', array($this, 'post_edited'), 10, 3);
-		add_action('edit_category', array($this, 'category_changed'));
+		add_action('edit_category', array($this, 'ban_all_posts'));
+		add_action('future_to_publish', 'ban_all_posts', 10, 1);
+
+		// Purge URLs when Comments are approved.
+		add_action('comment_unapproved_to_approved', 'comment_approved');
+
+		// Purge All URLs when updated_option is called.
+		add_action('updated_option', 'ban_all_posts');
 
         // Purge media URLs
         add_action('add_attachment', array($this, 'media_edited'));
@@ -263,13 +270,14 @@ class VDP {
 		}
 	}
 
-	public function category_changed($category_id) {
-		$posts = WP_Query('cat=' . $category_id);
-
-		foreach($posts as $post) {
-			$this->edited_post_ids[] = $post->ID;
-		}
+	/**
+	 * Record Urls of updated comments
+	 **/
+	public function comment_approved($comment) {
+		$post_id = $comment->comment_post_id;
+		$this->edited_post_ids[] = $post_id;
 	}
+
 
     /**
      * Records Media URLs that need to be purged
@@ -288,8 +296,14 @@ class VDP {
             }
     }
 
-	/** Private Methods **/
+    public function ban_all_posts() {
+		foreach($this->varnish_nodes as $node) {
+			$node->ban('.*\/$');
+			$node->ban('.*\/\?.*');
+		}
+	}
 
+	/** Private Methods **/
 	private static function get_db_table_name() {
 		global $wpdb;
 		return $wpdb->prefix.self::$db_table_name;
