@@ -77,7 +77,7 @@ class VDP {
 	}
 
 	public static function get_threshold() {		
-		$option_value = int( get_option( 'varnish-threshold' ) );		
+		$option_value = (int)get_option( 'varnish-threshold' );		
 	}
 
 	/**
