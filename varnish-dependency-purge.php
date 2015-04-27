@@ -14,7 +14,6 @@ class VDP {
 
 	private
 		$varnish_nodes    = array(),
-		$threshold        = 0,
 		$vdp_post_ids     = array(),
 		$edited_post_ids  = array(),
 		$deleted_post_ids = array(),
@@ -24,10 +23,6 @@ class VDP {
 		// Parse the varnish nodes
 		if( ($nodes = self::parse_varnish_nodes()) !== False) {
 			$this->varnish_nodes = $nodes;
-		}
-
-		if( ( $th = self::get_threshold() ) !== False) {
-			$this->$threshold = $th;
 		}
 
 		// Initialize the settings page
@@ -46,7 +41,7 @@ class VDP {
 		add_action('deleted_post', array($this, 'post_deleted'));
 		add_action('post_updated', array($this, 'post_edited'), 10, 3);
 		add_action('edit_category', array($this, 'ban_all_posts'));
-		add_action('future_to_publish', 'ban_all_posts');
+		add_action('future_to_publish', 'ban_all_posts', 10, 1);
 
 		// Purge URLs when Comments are approved.
 		add_action('comment_unapproved_to_approved', 'comment_approved');
@@ -82,10 +77,6 @@ class VDP {
 			}
 		}
 		return $nodes;
-	}
-
-	public static function get_threshold() {
-		$option_value = int( get_option( 'varnish-threshold' ) );
 	}
 
 	/**
@@ -210,7 +201,10 @@ class VDP {
 
 		if($this->posts_created) {
 			// Ban on all pages. Don't need to bother with the edited posts
-			ban_all_posts();
+			foreach($this->varnish_nodes as $node) {
+				$node->ban('.*\/$');
+				$node->ban('.*\/\?.*');
+			}
 		} else if(count($this->edited_post_ids) > 0) {
 			$this->remove_query_filter();
 
@@ -221,12 +215,6 @@ class VDP {
 			$purge_urls = $wpdb->get_results('
 				SELECT DISTINCT page_url FROM '.$this->get_db_table_name().' WHERE post_id IN ('.implode(',', $this->edited_post_ids).')
 			', ARRAY_A);
-
-			if ( count( $purged_urls ) > $this->threshold ) {
-				ban_all_posts();
-				truncate_db();
-				return;
-			} 
 
 			// Flatten the results
 			$purge_urls = array_map(create_function('$i', 'return $i[\'page_url\'];'), $purge_urls);
@@ -313,11 +301,6 @@ class VDP {
 			$node->ban('.*\/$');
 			$node->ban('.*\/\?.*');
 		}
-	}
-
-	public function truncate_db() {
-		global $wpdb;
-		$wpdb->query($wpdb->prepare('TRUNCATE TABLE '.self::get_db_table_name()));
 	}
 
 	/** Private Methods **/
@@ -417,7 +400,6 @@ class VDPSettingsPage {
 
 	public function register_settings() {
 		register_setting('vdp-settings-group', 'varnish-nodes');
-		resgiter_setting('vpd-settings-group', 'varnish-threshold');
 	}
 }
 
