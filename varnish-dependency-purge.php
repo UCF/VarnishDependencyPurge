@@ -2,7 +2,7 @@
 /*
 Plugin Name: Varnish Dependency Purger
 Description: Purge Varnish caches from WordPress
-Version: 1.1.1
+Version: 1.1.7
 Author: Chris Conover
 License: GPL3
 */
@@ -142,7 +142,7 @@ class VDP {
 			// Don't record assets and other stuff, Only record URLs that end in a / or are feeds for specified post types and custom thumbnails
 			// Don't record anything on 404 pages
 			// Don't record anything from anyone with WordPress cookies
-			// Dont' record anytyhing with the X-Skip-Depedency Check header (varnish heatlh check)
+			// Dont' record anytyhing with the X-Skip-Dependency Check header (varnish heatlh check)
 			$headers = apache_request_headers();
 			$wp_cookie_present = False;
 			foreach($_COOKIE as $name => $value) {
@@ -338,7 +338,7 @@ class VDPVarnishNode {
 		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Purge-URL:'.$url, 'Host:'.$_SERVER['SERVER_NAME'], 'X-Forwarded-Proto:'.$protocol));
 		$success = $this->make_request($request);
 		if(!$success) {
-			trigger_error('Varnish Depedency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
+			trigger_error('Varnish Dependency Purger: Unable to PURGE URL '.$url.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
 		}
 		curl_close($request);
 		return $success;
@@ -352,7 +352,7 @@ class VDPVarnishNode {
 		curl_setopt($request, CURLOPT_HTTPHEADER, array('X-Ban-URL:'.$match, 'X-Ban-Host:'.$_SERVER['SERVER_NAME'], 'Host:'.$_SERVER['SERVER_NAME']));
 		$success = $this->make_request($request);
 		if(!$success) {
-			trigger_error('Varnish Depedency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
+			trigger_error('Varnish Dependency Purger: Unable to BAN match '.$match.'. The following error occurred: '.curl_error($request), E_USER_WARNING);
 		}
 		curl_close($request);
 		return $success;
@@ -381,8 +381,8 @@ class VDPVarnishNode {
 
 class VDPSettingsPage {
 	public
-		$page_title = 'Varnish Depedency Purger',
-		$menu_title = 'Varnish Depedency Purger',
+		$page_title = 'Varnish Dependency Purger',
+		$menu_title = 'Varnish Dependency Purger',
 		$capability = 'administrator',
 		$menu_slug  = 'vdp-settings-page',
 		$file_name  = 'options.php';
