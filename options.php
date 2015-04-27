@@ -15,6 +15,18 @@
 					</p>
 				</td>
 			</tr>
+			<tr valign="top">
+				<th scope="row">Varnish Ban Threshold</th>
+				<td>
+					<input type="number" name="varnish-threshold"><?php echo get_option('varnish-threshold');?> />
+					<p>
+						This number is used to indicate how many posts can be banned individually.</p>
+					</p>
+					<p>
+						If more than this number of posts is queued up to be banned, the plugin will ban the entire site.</p>
+					</p>
+				</td>
+			</tr>
 		</table>
 		<?php submit_button(); ?>
 	</form>
