@@ -18,7 +18,7 @@ class VDP {
 		$vdp_post_ids     = array(),
 		$edited_post_ids  = array(),
 		$deleted_post_ids = array(),
-		$posts_created    = False,
+		$posts_created    = False;
 
 	public function __construct() {
 		// Parse the varnish nodes
