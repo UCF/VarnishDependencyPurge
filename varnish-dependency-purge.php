@@ -199,7 +199,6 @@ class VDP {
 	 **/
 	public function resolve_posts() {
 		global $wpdb;
-		echo 'Running ';
 
 		if($this->posts_created) {
 			// Ban on all pages. Don't need to bother with the edited posts
