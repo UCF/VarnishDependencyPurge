@@ -19,10 +19,8 @@ class VDP {
 		$edited_post_ids  = array(),
 		$deleted_post_ids = array(),
 		$posts_created    = False,
-		$error_path       = "";
 
 	public function __construct() {
-		$this->error_path = dirname( ini_get( 'error_log' ) ) . '/vdp_log';
 		// Parse the varnish nodes
 		if( ($nodes = self::parse_varnish_nodes()) !== False) {
 			$this->varnish_nodes = $nodes;
@@ -176,9 +174,6 @@ class VDP {
 				// Only record each post id once
 				$this->vdp_post_ids = array_unique($this->vdp_post_ids);
 
-				// Log number of posts written.
-				error_log( 'Writing '.count( $this->vpd_post_ids ). ' to database.', 3, $this->error_path );
-
 				// Insert the new dependencies
 				foreach($this->vdp_post_ids as $post_id) {
 					$wpdb->insert(
@@ -232,7 +227,6 @@ class VDP {
 
 			if ( count( $purged_urls ) > $this->threshold ) {		
 				$this->ban_all_posts();
-				error_log( 'Number of posts to ban exceeds site threshold of ' . $this->threshold . '. Banning all posts.', 3, $this->error_path );
 				return;		
 			} 
 
@@ -243,8 +237,6 @@ class VDP {
 					$node->purge($purge_url, 'https');
 				}
 			}
-
-			error_log( 'Banning ' . count( $purge_urls ) . ' posts.' );
 
 			$this->add_query_filter();
 		}
@@ -306,7 +298,7 @@ class VDP {
 			$node->ban('.*\/\?.*');
 		}
 	}
-	
+
 	private static function get_db_table_name() {
 		global $wpdb;
 		return $wpdb->prefix.self::$db_table_name;
