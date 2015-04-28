@@ -18,7 +18,7 @@
 			<tr valign="top">
 				<th scope="row">Varnish Ban Threshold</th>
 				<td>
-					<input type="number" name="varnish-threshold"><?php echo get_option('varnish-threshold');?> />
+					<input type="number" name="varnish-threshold" value="<?php echo get_option('varnish-threshold'); ?>" />
 					<p>
 						This number is used to indicate how many posts can be banned individually.</p>
 					</p>

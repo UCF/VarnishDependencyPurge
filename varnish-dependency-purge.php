@@ -27,7 +27,7 @@ class VDP {
 		}
 
 		if( ( $th = self::get_threshold() ) !== False) {		
-			$this->$threshold = $th;		
+			$this->threshold = $th;		
 		}
 
 		// Initialize the settings page
@@ -216,7 +216,6 @@ class VDP {
 
 			if ( count( $purged_urls ) > $this->threshold ) {		
 				ban_all_posts();		
-				truncate_db();		
 				return;		
 			} 
 
@@ -400,7 +399,7 @@ class VDPSettingsPage {
 
 	public function register_settings() {
 		register_setting('vdp-settings-group', 'varnish-nodes');
-		resgiter_setting('vpd-settings-group', 'varnish-threshold');
+		register_setting('vdp-settings-group', 'varnish-threshold');
 	}
 }
 
