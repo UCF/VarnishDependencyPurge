@@ -236,7 +236,8 @@ class VDP {
 			// Purge the URLs on each Varnish node
 			foreach($purge_urls as $purge_url) {
 				foreach($this->varnish_nodes as $node) {
-					$node->ban($purge_url);				}
+					$node->ban($purge_url);				
+				}
 			}
 
 			$this->add_query_filter();
