@@ -206,6 +206,15 @@ class VDP {
 		} else if(count($this->edited_post_ids) > 0) {
 			$this->remove_query_filter();
 
+			$post_count = $wpdb->get_var('
+				SELECT COUNT(*) FROM '.$this->get_db_table_name().' WHERE post_id IN ('.implode(',', $this->edited_post_ids).')
+			');
+
+			if ( $post_count > $this->threshold ) {		
+				$this->ban_all_posts();
+				return;		
+			} 
+
 			$this->edited_post_ids = array_unique($this->edited_post_ids);
 
 			// Get a list of all the  URLs dependent on any of the edited posts
@@ -224,16 +233,11 @@ class VDP {
 				}
 			}
 
-			if ( count( $purged_urls ) > $this->threshold ) {		
-				$this->ban_all_posts();
-				return;		
-			} 
-
 			// Purge the URLs on each Varnish node
 			foreach($purge_urls as $purge_url) {
 				foreach($this->varnish_nodes as $node) {
-					$node->purge($purge_url, 'http');
-					$node->purge($purge_url, 'https');
+					$node->ban($purge_url);
+					$node->ban($purge_url);
 				}
 			}
 
