@@ -14,7 +14,7 @@ class VDP {
 
 	private
 		$varnish_nodes    = array(),
-		$threshold        = 30000,
+		$threshold        = 3000,
 		$vdp_post_ids     = array(),
 		$edited_post_ids  = array(),
 		$deleted_post_ids = array(),
