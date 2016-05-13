@@ -157,7 +157,7 @@ class VDP {
 			if( !preg_match('/\/esi\.php/', $_SERVER['REQUEST_URI'] )
 				&& !is_404()
 				&& !$wp_cookie_present
-				&& !(isset($headers))
+				&& !isset($headers)
 				&& !isset($headers['X-Skip-Dependency-Check'])) {
 
 				// Don't retrigger register_posts when making queries later in this
