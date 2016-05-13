@@ -26,8 +26,8 @@ class VDP {
 			$this->varnish_nodes = $nodes;
 		}
 
-		if( ( $th = self::get_threshold() ) !== False) {		
-			$this->threshold = $th;		
+		if( ( $th = self::get_threshold() ) !== False) {
+			$this->threshold = $th;
 		}
 
 		// Initialize the settings page
@@ -76,8 +76,8 @@ class VDP {
 		return $nodes;
 	}
 
-	public static function get_threshold() {		
-		$option_value = (int)get_option( 'varnish-threshold' );		
+	public static function get_threshold() {
+		$option_value = (int)get_option( 'varnish-threshold' );
 	}
 
 	/**
@@ -143,7 +143,9 @@ class VDP {
 			// Don't record anything on 404 pages
 			// Don't record anything from anyone with WordPress cookies
 			// Dont' record anytyhing with the X-Skip-Dependency Check header (varnish heatlh check)
-			$headers = apache_request_headers();
+			if (function_exists('apache_request_headers')) {
+				$headers = apache_request_headers();
+			}
 			$wp_cookie_present = False;
 			foreach($_COOKIE as $name => $value) {
 				if(strpos($name, 'wordpress') == 0 || strpos($name, 'wp-settings') == 0) {
@@ -155,6 +157,7 @@ class VDP {
 			if( !preg_match('/\/esi\.php/', $_SERVER['REQUEST_URI'] )
 				&& !is_404()
 				&& !$wp_cookie_present
+				&& !(isset($headers))
 				&& !isset($headers['X-Skip-Dependency-Check'])) {
 
 				// Don't retrigger register_posts when making queries later in this
@@ -210,10 +213,10 @@ class VDP {
 				SELECT COUNT(*) FROM '.$this->get_db_table_name().' WHERE post_id IN ('.implode(',', $this->edited_post_ids).')
 			');
 
-			if ( $post_count > $this->threshold ) {		
+			if ( $post_count > $this->threshold ) {
 				$this->ban_all_posts();
-				return;		
-			} 
+				return;
+			}
 
 			$this->edited_post_ids = array_unique($this->edited_post_ids);
 
@@ -236,7 +239,7 @@ class VDP {
 			// Purge the URLs on each Varnish node
 			foreach($purge_urls as $purge_url) {
 				foreach($this->varnish_nodes as $node) {
-					$node->ban($purge_url);				
+					$node->ban($purge_url);
 				}
 			}
 
