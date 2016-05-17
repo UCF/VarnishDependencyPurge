@@ -2,7 +2,7 @@
 /*
 Plugin Name: Varnish Dependency Purger
 Description: Purge Varnish caches from WordPress
-Version: 1.1.9
+Version: 1.1.13
 Author: Chris Conover
 License: GPL3
 */
